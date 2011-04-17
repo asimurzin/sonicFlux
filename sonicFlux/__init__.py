@@ -26,36 +26,25 @@
 #--------------------------------------------------------------------------------------
 from Foam import FOAM_VERSION, FOAM_BRANCH_VERSION, FOAM_REF_VERSION
 if FOAM_VERSION( "<=", "010401" ):
-    from Foam.applications.solvers.compressible.r1_4_1_dev.sonicFoam import *
+    from sonicFlux.r1_4_1_dev import *
     pass
        
        
 #--------------------------------------------------------------------------------------
-if FOAM_REF_VERSION( "==", "010500" ):
-    from Foam.applications.solvers.compressible.r1_5.sonicFoam import *
+if FOAM_VERSION( "==", "010500" ):
+    from sonicFlux.r1_5 import *
     pass
 
 
 #--------------------------------------------------------------------------------------
-if FOAM_BRANCH_VERSION( "dev", "==", "010500" ) :
-    from Foam.applications.solvers.compressible.r1_5.sonicFoam import *
-    pass
-
-#--------------------------------------------------------------------------------------
-if FOAM_REF_VERSION( "==", "010600" ):
-    from Foam.applications.solvers.compressible.r1_6.sonicFoam import *
+if FOAM_REF_VERSION( ">=", "010600" ):
+    from sonicFlux.r1_6 import *
     pass
 
 
 #--------------------------------------------------------------------------------------
 if FOAM_BRANCH_VERSION( "dev", ">=", "010600" ):
-    from Foam.applications.solvers.compressible.r1_6_dev.sonicFoam import *
-    pass
-
-
-#--------------------------------------------------------------------------------------
-if FOAM_REF_VERSION( ">=", "010700" ):
-    from Foam.applications.solvers.compressible.r1_6.sonicFoam import *
+    from sonicFlux.r1_6_dev import *
     pass
 
 
