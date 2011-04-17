@@ -146,111 +146,96 @@ def main_standalone( argc, argv ):
 
     from Foam.OpenFOAM.include import createMesh
     mesh = createMesh( runTime )
-    
-    # All "IOobject" (fvMesh, for example)  should overlive all its dependency IOobjects (fields, for exmaple)
-    def runSeparateNamespace( runTime, mesh ):
-       thermodynamicProperties, R, Cv = readThermodynamicProperties( runTime, mesh )
-    
-       transportProperties, mu = readingTransportProperties( runTime, mesh )
-    
-       p, T, e, U, psi, rho, phi = _createFields( runTime, mesh, R, Cv )
-    
-       from Foam.finiteVolume.cfdTools.general.include import initContinuityErrs
-       cumulativeContErr = initContinuityErrs()
 
-       from Foam.OpenFOAM import ext_Info, nl
-       ext_Info() << "\nStarting time loop\n" << nl
+    thermodynamicProperties, R, Cv = readThermodynamicProperties( runTime, mesh )
     
-       runTime.increment()
-       while not runTime.end() :
-           ext_Info() << "Time = " << runTime.timeName() << nl << nl
- 
-           from Foam.finiteVolume.cfdTools.general.include import readPISOControls
-           piso, nCorr, nNonOrthCorr, momentumPredictor, transonic, nOuterCorr, ddtPhiCorr = readPISOControls( mesh )
+    transportProperties, mu = readingTransportProperties( runTime, mesh )
+    
+    p, T, e, U, psi, rho, phi = _createFields( runTime, mesh, R, Cv )
+    
+    from Foam.finiteVolume.cfdTools.general.include import initContinuityErrs
+    cumulativeContErr = initContinuityErrs()
 
-           from Foam.finiteVolume.cfdTools.compressible import compressibleCourantNo
-           CoNum, meanCoNum = compressibleCourantNo( mesh, phi, rho, runTime )
-        
-           from Foam.finiteVolume.cfdTools.compressible import rhoEqn
-           rhoEqn( rho, phi )
-        
-           from Foam import fvm
-           UEqn = fvm.ddt( rho, U ) + fvm.div( phi, U ) - fvm.laplacian( mu, U )
-        
-           from Foam import fvc
-           from Foam.finiteVolume import solve
-           solve( UEqn == -fvc.grad( p ) )
-        
-           solve( fvm.ddt( rho, e ) + fvm.div( phi, e ) - fvm.laplacian( mu, e ) == \
-                  - p * fvc.div( phi / fvc.interpolate( rho ) ) + mu * fvc.grad( U ).symm().magSqr() )
-         
-           T.ext_assign( e / Cv )
-        
-           psi.ext_assign( 1.0 / ( R * T ) )
-        
-           # --- PISO loop
-           for corr in range( nCorr ):
-               rUA = 1.0/UEqn.A()
-               U.ext_assign( rUA * UEqn.H() )
-            
-               from Foam.finiteVolume import surfaceScalarField
-               from Foam.OpenFOAM import word
-               phid = surfaceScalarField( word( "phid" ),
-                                          fvc.interpolate( psi ) * ( ( fvc.interpolate( U ) & mesh.Sf() ) + fvc.ddtPhiCorr( rUA, rho, U, phi ) ) )
-            
-               for nonOrth in range( nNonOrthCorr + 1 ):
-                   pEqn = fvm.ddt( psi, p ) + fvm.div( phid, p ) - fvm.laplacian( rho * rUA, p ) 
+    from Foam.OpenFOAM import ext_Info, nl
+    ext_Info() << "\nStarting time loop\n" << nl
+    
+    runTime.increment()
+    while not runTime.end() :
+        ext_Info() << "Time = " << runTime.timeName() << nl << nl
 
-                   pEqn.solve()
-                   phi.ext_assign( pEqn.flux() )
-                   pass
-            
-               cumulativeContErr = compressibleContinuityErrs( p, rho, phi, psi, cumulativeContErr )
-            
-               U.ext_assign( U - rUA * fvc.grad( p ) )
-               U.correctBoundaryConditions()
-            
-               pass
-            
-           rho.ext_assign( psi * p )
-        
-           runTime.write()
+        from Foam.finiteVolume.cfdTools.general.include import readPISOControls
+        piso, nCorr, nNonOrthCorr, momentumPredictor, transSonic, nOuterCorr = readPISOControls( mesh )
 
-           ext_Info() << "ExecutionTime = " << runTime.elapsedCpuTime() << " s" << \
+        from Foam.finiteVolume.cfdTools.compressible import compressibleCourantNo
+        CoNum, meanCoNum = compressibleCourantNo( mesh, phi, rho, runTime )
+        
+        from Foam.finiteVolume.cfdTools.compressible import rhoEqn
+        rhoEqn( rho, phi )
+        
+        from Foam import fvm
+        UEqn = fvm.ddt( rho, U ) + fvm.div( phi, U ) - fvm.laplacian( mu, U )
+        
+        from Foam import fvc
+        from Foam.finiteVolume import solve
+        solve( UEqn == -fvc.grad( p ) )
+
+        solve( fvm.ddt( rho, e ) + fvm.div( phi, e ) - fvm.laplacian( mu, e ) == \
+               - p * fvc.div( phi / fvc.interpolate( rho ) ) + mu * fvc.grad( U ).symm().magSqr() )
+        
+        T.ext_assign( e / Cv )
+        
+        psi.ext_assign( 1.0 / ( R * T ) )
+        
+        # --- PISO loop
+        for corr in range( nCorr ):
+            rUA = 1.0/UEqn.A()
+            U.ext_assign( rUA * UEqn.H() )
+            
+            
+            from Foam.OpenFOAM import word
+            phid = ( ( fvc.interpolate( rho * U ) & mesh.Sf() ) + fvc.ddtPhiCorr( rUA, rho, U, phi ) )  / fvc.interpolate( p )
+            print "111111111111"
+            for nonOrth in range( nNonOrthCorr + 1 ):
+                pEqn = fvm.ddt( psi, p ) + fvm.div( phid, p, word( "div(phid,p)" ) ) - fvm.laplacian( rho * rUA, p ) 
+                
+                pEqn.solve()
+                phi = pEqn.flux()
+                pass
+            
+            cumulativeContErr = compressibleContinuityErrs( p, rho, phi, psi, cumulativeContErr )
+            
+            U.ext_assign( U - rUA * fvc.grad( p ) )
+            U.correctBoundaryConditions()
+            
+            pass
+            
+        rho.ext_assign( psi * p )
+        
+        runTime.write()
+
+        ext_Info() << "ExecutionTime = " << runTime.elapsedCpuTime() << " s" << \
               "  ClockTime = " << runTime.elapsedClockTime() << " s" << nl << nl
         
-           runTime.increment()
-           pass
-    #---------------------------------------------------------------------------------
-    runSeparateNamespace( runTime, mesh )
-    
-    from Foam.OpenFOAM import ext_Info, nl
+        runTime.increment()
+        pass
+
     ext_Info() << "End\n"
-    
+
     import os
     return os.EX_OK
 
-
-#--------------------------------------------------------------------------------------
-
+#----------------------------------------------------------------------------------------------------------
 import sys, os
 from Foam import FOAM_VERSION
-if FOAM_VERSION( "==", "010500" ):
+if FOAM_VERSION( "<=", "010401" ):
    if __name__ == "__main__" :
       argv = sys.argv
-      if len(argv) > 1 and argv[ 1 ] == "-test":
-         argv = None
-         test_dir= os.path.join( os.environ[ "PYFOAM_TESTING_DIR" ],'cases', 'local', 'r1.5', 'sonicFoam', 'forwardStep' )
-         argv = [ __file__, "-case", test_dir ]
-         pass
       os._exit( main_standalone( len( argv ), argv ) )
       pass
    pass   
 else:
    from Foam.OpenFOAM import ext_Info
-   ext_Info()<< "\nTo use this solver, It is necessary to SWIG OpenFoam1.5\n "
-
+   ext_Info()<< "\nTo use this solver, It is necessary to SWIG OpenFoam1.4.1-dev\n "
 
     
 #--------------------------------------------------------------------------------------
-
