@@ -43,6 +43,7 @@ def createFields( runTime, mesh):
                                             ref.fileName( runTime.timeName() ),
                                             mesh ),
                               man.volScalarField( pThermo.rho(), man.Deps( pThermo ) ) )
+
     ref.ext_Info() << "Reading field U\n" << ref.nl
     U = man.volVectorField( man.IOobject( ref.word( "U" ),
                                           ref.fileName( runTime.timeName() ),
@@ -64,6 +65,7 @@ def fun_Ueqn( rho, U, phi, turbulence, p ):
   
     ref.solve( UEqn == -man.fvc.grad( p ) );
     return UEqn
+
 
 #--------------------------------------------------------------------------------------
 def fun_eEqn( rho, e, phi, turbulence, p, thermo ):
@@ -110,8 +112,7 @@ def fun_pEqn( mesh, runTime, thermo, rho, p, psi, U, phi, turbulence, UEqn, cumu
 #--------------------------------------------------------------------------------------
 def main_standalone( argc, argv ):
 
-    from Foam.OpenFOAM.include import setRootCase
-    args = setRootCase( argc, argv )
+    args = ref.setRootCase( argc, argv )
 
     runTime = man.createTime( args )
 
