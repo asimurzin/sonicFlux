@@ -79,10 +79,11 @@ def fun_eEqn( rho, e, phi, turbulence, p, thermo ):
 #--------------------------------------------------------------------------------------
 def fun_pEqn( mesh, runTime, thermo, rho, p, psi, U, phi, turbulence, UEqn, cumulativeContErr, nNonOrthCorr ):
       
-     rho().ext_assign( thermo.rho() )
+     rho<<=thermo.rho()
+ 
      rAU = 1.0 / UEqn.A()
   
-     U().ext_assign( rAU * UEqn.H() )
+     U<<= rAU * UEqn.H()
      
      phid = ref.surfaceScalarField( ref.word( "phid" ),
                                     ref.fvc.interpolate( psi ) * 
@@ -95,14 +96,14 @@ def fun_pEqn( mesh, runTime, thermo, rho, p, psi, U, phi, turbulence, UEqn, cumu
          pass
 
      if nonOrth == nNonOrthCorr:
-         phi().ext_assign(  pEqn.flux() )
+         phi<<=  pEqn.flux()
          pass
          
      ref.rhoEqn( rho, phi )
   
      cumulativeContErr = ref.compressibleContinuityErrs( rho(), thermo, cumulativeContErr ) #it is necessary to force "mixed calculations" implementation
 
-     U().ext_assign( U() - rAU * ref.fvc.grad( p() ) )
+     U -= rAU * ref.fvc.grad( p )
      U.correctBoundaryConditions()
       
      return cumulativeContErr
@@ -143,7 +144,7 @@ def main_standalone( argc, argv ):
 
         turbulence.correct()
 
-        rho().ext_assign( pThermo.rho() )
+        rho <<= pThermo.rho()
 
         runTime.write()
 
