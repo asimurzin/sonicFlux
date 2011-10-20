@@ -70,7 +70,7 @@ def fun_Ueqn( rho, U, phi, turbulence, p ):
 #--------------------------------------------------------------------------------------
 def fun_eEqn( rho, e, phi, turbulence, p, thermo ):
     ref.solve(  ref.fvm.ddt( rho, e ) + ref.fvm.div( phi , e ) - ref.fvm.laplacian( turbulence.alphaEff(), e )  ==
-          - p() * ref.fvc.div( phi / ref.fvc.interpolate( rho ) ) )
+          - p() * ref.fvc.div( phi() / ref.fvc.interpolate( rho ) ) ) # mixed calculation
 
     thermo.correct()
     pass
@@ -79,11 +79,11 @@ def fun_eEqn( rho, e, phi, turbulence, p, thermo ):
 #--------------------------------------------------------------------------------------
 def fun_pEqn( mesh, runTime, thermo, rho, p, psi, U, phi, turbulence, UEqn, cumulativeContErr, nNonOrthCorr ):
       
-     rho<<=thermo.rho()
+     rho<<thermo.rho()
  
      rAU = 1.0 / UEqn.A()
   
-     U<<= rAU * UEqn.H()
+     U<< rAU * UEqn.H()
      
      phid = ref.surfaceScalarField( ref.word( "phid" ),
                                     ref.fvc.interpolate( psi ) * 
@@ -96,7 +96,7 @@ def fun_pEqn( mesh, runTime, thermo, rho, p, psi, U, phi, turbulence, UEqn, cumu
          pass
 
      if nonOrth == nNonOrthCorr:
-         phi<<=  pEqn.flux()
+         phi<<  pEqn.flux()
          pass
          
      ref.rhoEqn( rho, phi )
@@ -144,7 +144,7 @@ def main_standalone( argc, argv ):
 
         turbulence.correct()
 
-        rho <<= pThermo.rho()
+        rho << pThermo.rho()
 
         runTime.write()
 
