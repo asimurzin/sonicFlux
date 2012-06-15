@@ -38,7 +38,7 @@ if FOAM_VERSION( "==", "010500" ):
 
 
 #--------------------------------------------------------------------------------------
-if FOAM_REF_VERSION( ">=", "010600" ):
+if FOAM_REF_VERSION( ">=", "010600" ) and FOAM_REF_VERSION( "<=", "010701" ):
     from sonicFlux.r1_6 import *
     pass
 
